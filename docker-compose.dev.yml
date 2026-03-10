@@ -1,0 +1,63 @@
+# Docker Compose para Desenvolvimento
+# Permite executar comandos dotnet ef dentro do container
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: nmj-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=YourStrong@Password123
+      - POSTGRES_DB=nmj
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d nmj"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    networks:
+      - nmj-network
+
+  # .NET Backend API com SDK
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nmj-api
+    env_file:
+      - .env
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionString=DockerConnectionString
+      - ConnectionStrings__DockerConnectionStringdbServer=postgres
+      - ConnectionStrings__DockerConnectionStringdbName=nmj
+      - ConnectionStrings__DockerConnectionStringdbUser=postgres
+      - ConnectionStrings__DockerConnectionStringdbPass=YourStrong@Password123
+      - AwsSettings__AWS_ACCESS_KEY=${AwsSettings__AWS_ACCESS_KEY}
+      - AwsSettings__AWS_SECRET_KEY=${AwsSettings__AWS_SECRET_KEY}
+      - AwsSettings__S3PrivateBucket=${AwsSettings__S3PrivateBucket}
+      - AwsSettings__S3Region=${AwsSettings__S3Region}
+    ports:
+      - "5001:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - nmj-network
+    restart: unless-stopped
+    # Volume mount para hot-reload (opcional)
+    volumes:
+      - ./APIServer:/src/APIServer:ro
+      - ./Business:/src/Business:ro
+
+networks:
+  nmj-network:
+    driver: bridge
+
+volumes:
+  postgres-data:

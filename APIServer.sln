@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36705.20
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "APIServer", "APIServer\APIServer.csproj", "{335E8752-72B2-23F3-5451-5989BCA59401}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Business", "Business\Business.csproj", "{978E194C-F605-43CD-A817-25C24A6BD265}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}"
+	ProjectSection(SolutionItems) = preProject
+		.github\instructions\.instructions.md = .github\instructions\.instructions.md
+		README.md = README.md
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{335E8752-72B2-23F3-5451-5989BCA59401}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{335E8752-72B2-23F3-5451-5989BCA59401}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{335E8752-72B2-23F3-5451-5989BCA59401}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{335E8752-72B2-23F3-5451-5989BCA59401}.Release|Any CPU.Build.0 = Release|Any CPU
+		{978E194C-F605-43CD-A817-25C24A6BD265}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{978E194C-F605-43CD-A817-25C24A6BD265}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{978E194C-F605-43CD-A817-25C24A6BD265}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{978E194C-F605-43CD-A817-25C24A6BD265}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A9DEF42A-BC50-46A0-82E4-CAC5A726C93A}
+	EndGlobalSection
+EndGlobal

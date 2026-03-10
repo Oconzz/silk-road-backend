@@ -1,0 +1,53 @@
+# NMJ Backend - Docker Compose
+# Includes PostgreSQL + API Backend
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: nmj-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=YourStrong@Password123
+      - POSTGRES_DB=nmj
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d nmj"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    networks:
+      - nmj-network
+
+  # .NET Backend API
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nmj-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionString=DockerConnectionString
+      - ConnectionStrings__DockerConnectionStringdbServer=postgres
+      - ConnectionStrings__DockerConnectionStringdbName=nmj
+      - ConnectionStrings__DockerConnectionStringdbUser=postgres
+      - ConnectionStrings__DockerConnectionStringdbPass=YourStrong@Password123
+    ports:
+      - "5001:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - nmj-network
+    restart: unless-stopped
+
+networks:
+  nmj-network:
+    driver: bridge
+
+volumes:
+  postgres-data:

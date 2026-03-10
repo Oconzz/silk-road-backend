@@ -1,0 +1,112 @@
+variables:
+  AWS_ACCESS_KEY_ID : ${AWS_ACCESS_KEY_ID}
+  AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+  AWS_REGION: ${AWS_REGION}
+  AWS_BUCKET_NAME: ${AWS_BUCKET_NAME}
+  AWS_BACK_END_ENV: ${AWS_BACK_END_ENV}
+  AWS_BACK_END_APP: ${AWS_BACK_END_APP}
+  AWS_BACK_END_ENV_STAGING: ${AWS_BACK_END_ENV_STAGING}
+  AWS_BACK_END_APP_STAGING: ${AWS_BACK_END_APP_STAGING}
+  BUILD_IMAGE: ${BACK_END_BUILD_IMAGE}
+  DEPLOY_IMAGE: ${AWS_DEPLOY_IMAGE}
+  ARTIFACT_COMPRESSION_LEVEL: "fastest"
+  
+stages:
+  #- test
+  - build
+  - deploy
+  - deploy_staging
+  - cleanup
+
+
+#unit_test:
+#  stage: test
+#  image: $BUILD_IMAGE
+#  tags:
+#    - build
+#  script:
+#    - echo "=== Running Unit Tests (Minimal Verbosity) ==="
+#    - dotnet test ./UnitTesting/UnitTesting.csproj --configuration Debug --verbosity minimal --logger "junit;LogFilePath=./UnitTesting/test-results/unit-tests.xml"
+#    - ls
+#  artifacts:
+#    when: on_failure
+#    expire_in: 2 days
+#    reports:
+#      junit: ./UnitTesting/test-results/unit-tests.xml
+
+
+build:
+  stage: build
+  image: $BUILD_IMAGE
+  tags:
+    - build
+    
+  script:
+    - apt-get update
+    - apt-get install -y zip unzip tree
+    - cd APIServer
+    
+    - dotnet restore APIServer.csproj --force
+    - dotnet nuget locals all --clear
+    
+    - dotnet publish APIServer.csproj --configuration Debug --output published /p:CopyLocalLockFileAssemblies=true /p:UseAppHost=true /p:GenerateDocumentationFile=true /p:GenerateRuntimeConfigurationFiles=true /p:RollForward=LatestMinor /p:GenerateSwaggerDocument=true --self-contained true
+
+    - cd published
+    
+    - zip -9 -r ${CI_PIPELINE_ID}.zip . -x "refs/*" -x "refs/**/*"
+
+  artifacts:
+    paths:
+      - APIServer/published/${CI_PIPELINE_ID}.zip
+    expire_in: 1 days
+  only:
+    - Production
+    - Staging
+
+deploy:
+  stage: deploy
+  image: $DEPLOY_IMAGE
+  dependencies:
+    - build
+
+  script:
+    # Set AWS credentials (use GitLab CI/CD variables for security)
+    - export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+    - export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+    - export AWS_DEFAULT_REGION=${AWS_REGION}
+    - VERSION_LABEL="app-$(date +%Y%m%d%H%M%S)"
+    - aws s3 cp "./APIServer/published/$CI_PIPELINE_ID.zip" "s3://${AWS_BUCKET_NAME}/${VERSION_LABEL}.zip" --region $AWS_REGION
+    - aws elasticbeanstalk create-application-version --application-name $AWS_BACK_END_APP --version-label $VERSION_LABEL --source-bundle S3Bucket="$AWS_BUCKET_NAME",S3Key="$VERSION_LABEL.zip"
+    - aws elasticbeanstalk update-environment --environment-name $AWS_BACK_END_ENV --version-label $VERSION_LABEL
+  only:
+    - Production
+
+ 
+deploy_staging:
+  stage: deploy_staging
+  image: $DEPLOY_IMAGE
+  dependencies:
+    - build
+
+  script:
+    # Set AWS credentials (use GitLab CI/CD variables for security)
+    - export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+    - export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+    - export AWS_DEFAULT_REGION=${AWS_REGION}
+    - VERSION_LABEL="app-$(date +%Y%m%d%H%M%S)"
+    - aws sts get-caller-identity
+    - aws s3 cp "./APIServer/published/${CI_PIPELINE_ID}.zip" "s3://${AWS_BUCKET_NAME}/${VERSION_LABEL}.zip" --region "${AWS_REGION}"
+    - aws elasticbeanstalk create-application-version --application-name ${AWS_BACK_END_APP_STAGING} --version-label ${VERSION_LABEL} --source-bundle S3Bucket="${AWS_BUCKET_NAME}",S3Key="${VERSION_LABEL}.zip" --region "${AWS_REGION}"
+    - aws elasticbeanstalk update-environment --environment-name ${AWS_BACK_END_ENV_STAGING} --version-label ${VERSION_LABEL} --region "${AWS_REGION}"
+  only:
+    - Staging
+
+cleanup:
+  stage: cleanup
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - docker rmi $BUILD_IMAGE || true
+    - docker rmi $DEPLOY_IMAGE || true
+  when: always
